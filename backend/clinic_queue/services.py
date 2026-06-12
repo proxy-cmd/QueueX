@@ -80,6 +80,30 @@ def calculate_wait_time(token):
     return people_ahead(token) * settings.average_consultation_minutes
 
 
+def token_wait_details(token):
+    return {
+        'token': token,
+        'people_ahead': people_ahead(token),
+        'estimated_wait': calculate_wait_time(token),
+    }
+
+
+def public_queue_snapshot():
+    settings = QueueSettings.load()
+    waiting = waiting_tokens().select_related('patient')
+    queue_length = waiting.count()
+    upcoming = list(waiting[:5])
+    current = current_serving_token()
+
+    return {
+        'clinic': settings,
+        'current_serving': current,
+        'upcoming_tokens': upcoming,
+        'queue_length': queue_length,
+        'estimated_wait': queue_length * settings.average_consultation_minutes,
+    }
+
+
 def queue_stats():
     today = timezone.localdate()
 

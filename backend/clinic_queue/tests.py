@@ -10,6 +10,7 @@ from .services import (
     complete_token,
     create_token,
     people_ahead,
+    public_queue_snapshot,
     queue_stats,
 )
 
@@ -72,6 +73,17 @@ class QueueServiceTests(TestCase):
         self.assertEqual(stats['completed_today'], 1)
         self.assertIsNone(stats['current_serving'])
 
+    def test_public_queue_snapshot(self):
+        first = create_token('Riya Sharma', '9876543210')
+        second = create_token('Aman Khan', '9876543211')
+        call_next_token()
+
+        snapshot = public_queue_snapshot()
+
+        self.assertEqual(snapshot['current_serving'].id, first.id)
+        self.assertEqual(snapshot['upcoming_tokens'][0].id, second.id)
+        self.assertEqual(snapshot['queue_length'], 1)
+
 
 class ReceptionViewTests(TestCase):
     def setUp(self):
@@ -132,3 +144,33 @@ class ReceptionViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(token.status, Token.SERVING)
+
+
+class PublicQueueViewTests(TestCase):
+    def test_patient_status_is_public(self):
+        create_token('Riya Sharma', '9876543210')
+        token = create_token('Aman Khan', '9876543211')
+
+        response = self.client.get(
+            reverse('clinic_queue:patient_status', args=[token.token_number])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, token.token_number)
+        self.assertContains(response, 'People ahead')
+        self.assertContains(response, '1')
+
+    def test_patient_status_404s_for_unknown_token(self):
+        response = self.client.get(reverse('clinic_queue:patient_status', args=['A999']))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_display_board_is_public(self):
+        token = create_token('Riya Sharma', '9876543210')
+        call_next_token()
+
+        response = self.client.get(reverse('clinic_queue:display_board'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Now serving')
+        self.assertContains(response, token.token_number)

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Token {{ token.token_number }} | Queue Cure{% endblock %}
+
+{% block content %}
+<main class="patient-shell">
+    <section class="patient-card">
+        <div class="patient-header">
+            <p class="clinic-line">{{ clinic.clinic_name }}</p>
+            <h1>Your queue status</h1>
+        </div>
+
+        <div class="now-serving-line">
+            <span>Now serving</span>
+            <strong>{% if current_serving %}{{ current_serving.token_number }}{% else %}Not started{% endif %}</strong>
+        </div>
+
+        <section class="patient-token-block">
+            <span>Your token</span>
+            <strong>{{ token.token_number }}</strong>
+            <p>{{ token.get_status_display }}</p>
+        </section>
+
+        <section class="patient-metrics" aria-label="Token wait details">
+            <article>
+                <span>People ahead</span>
+                <strong>{{ people_ahead }}</strong>
+            </article>
+            <article>
+                <span>Estimated wait</span>
+                <strong>{{ estimated_wait }} min</strong>
+            </article>
+        </section>
+
+        <p class="quiet-note">This page is read-only. It will refresh live once WebSockets are added in the next module.</p>
+    </section>
+</main>
+{% endblock %}

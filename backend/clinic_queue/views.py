@@ -13,7 +13,9 @@ from .services import (
     cancel_token,
     complete_token,
     create_token,
+    public_queue_snapshot,
     queue_stats,
+    token_wait_details,
 )
 
 
@@ -131,3 +133,20 @@ def _dashboard_with_form(request, patient_form=None, settings_form=None):
         'stats': queue_stats(),
     }
     return render(request, 'clinic_queue/reception_dashboard.html', context, status=400)
+
+
+def patient_status(request, token_number):
+    token = get_object_or_404(
+        Token.objects.select_related('patient'),
+        token_number=token_number.upper(),
+    )
+
+    context = {
+        **public_queue_snapshot(),
+        **token_wait_details(token),
+    }
+    return render(request, 'clinic_queue/patient_status.html', context)
+
+
+def display_board(request):
+    return render(request, 'clinic_queue/display_board.html', public_queue_snapshot())

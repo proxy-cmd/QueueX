@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Display Board | Queue Cure{% endblock %}
+
+{% block content %}
+<main class="display-shell">
+    <section class="display-board">
+        <header class="display-header">
+            <div>
+                <p class="clinic-line">{{ clinic.clinic_name }}</p>
+                <h1>Now serving</h1>
+            </div>
+            <div class="display-meta">
+                <span>Queue length</span>
+                <strong>{{ queue_length }}</strong>
+            </div>
+        </header>
+
+        <section class="serving-number">
+            {% if current_serving %}
+                {{ current_serving.token_number }}
+            {% else %}
+                --
+            {% endif %}
+        </section>
+
+        <section class="display-lower">
+            <div>
+                <h2>Upcoming</h2>
+                <div class="upcoming-row">
+                    {% for token in upcoming_tokens %}
+                        <span>{{ token.token_number }}</span>
+                    {% empty %}
+                        <span>No waiting tokens</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="wait-block">
+                <span>Estimated total wait</span>
+                <strong>{{ estimated_wait }} min</strong>
+            </div>
+        </section>
+    </section>
+</main>
+{% endblock %}
