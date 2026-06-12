@@ -88,6 +88,21 @@ def token_wait_details(token):
     }
 
 
+def token_payload(token):
+    wait_time = calculate_wait_time(token) if token.status == Token.WAITING else 0
+
+    return {
+        'id': token.id,
+        'token_number': token.token_number,
+        'patient_name': token.patient.name,
+        'patient_phone': token.patient.phone,
+        'status': token.status,
+        'status_label': token.get_status_display(),
+        'people_ahead': people_ahead(token),
+        'estimated_wait': wait_time,
+    }
+
+
 def public_queue_snapshot():
     settings = QueueSettings.load()
     waiting = waiting_tokens().select_related('patient')
@@ -101,6 +116,38 @@ def public_queue_snapshot():
         'upcoming_tokens': upcoming,
         'queue_length': queue_length,
         'estimated_wait': queue_length * settings.average_consultation_minutes,
+    }
+
+
+def queue_payload():
+    snapshot = public_queue_snapshot()
+    stats = queue_stats()
+    tokens = (
+        Token.objects.select_related('patient')
+        .exclude(status=Token.CANCELLED)
+        .order_by('id')[:50]
+    )
+
+    return {
+        'clinic_name': snapshot['clinic'].clinic_name,
+        'current_serving': (
+            token_payload(snapshot['current_serving'])
+            if snapshot['current_serving']
+            else None
+        ),
+        'upcoming_tokens': [token_payload(token) for token in snapshot['upcoming_tokens']],
+        'queue_length': snapshot['queue_length'],
+        'estimated_wait': snapshot['estimated_wait'],
+        'stats': {
+            'total_waiting': stats['total_waiting'],
+            'completed_today': stats['completed_today'],
+            'current_serving': (
+                stats['current_serving'].token_number
+                if stats['current_serving']
+                else None
+            ),
+        },
+        'tokens': [token_payload(token) for token in tokens],
     }
 
 

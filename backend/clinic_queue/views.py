@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import PatientForm, QueueSettingsForm
 from .models import QueueSettings, Token
+from .realtime import broadcast_queue
 from .services import (
     call_next_token,
     cancel_token,
@@ -64,8 +65,9 @@ def create_patient_token(request):
         messages.error(request, 'Token could not be created. Please try again.')
         return redirect('clinic_queue:reception_dashboard')
 
+    broadcast_queue()
     messages.success(request, f'Token {token.token_number} created for {token.patient.name}.')
-    return redirect('clinic_queue:reception_dashboard')
+    return _action_response(request, f'Token {token.token_number} created for {token.patient.name}.')
 
 
 @login_required
@@ -78,10 +80,12 @@ def call_next(request):
     token = call_next_token()
     if token:
         messages.success(request, f'Now serving {token.token_number}.')
+        broadcast_queue()
+        return _action_response(request, f'Now serving {token.token_number}.')
     else:
         messages.info(request, 'No waiting patients right now.')
 
-    return redirect('clinic_queue:reception_dashboard')
+    return _action_response(request, 'No waiting patients right now.')
 
 
 @login_required
@@ -89,8 +93,9 @@ def call_next(request):
 def complete_patient_token(request, token_id):
     token = get_object_or_404(Token, id=token_id)
     complete_token(token.id)
+    broadcast_queue()
     messages.success(request, f'Token {token.token_number} completed.')
-    return redirect('clinic_queue:reception_dashboard')
+    return _action_response(request, f'Token {token.token_number} completed.')
 
 
 @login_required
@@ -98,8 +103,9 @@ def complete_patient_token(request, token_id):
 def cancel_patient_token(request, token_id):
     token = get_object_or_404(Token, id=token_id)
     cancel_token(token.id)
+    broadcast_queue()
     messages.success(request, f'Token {token.token_number} cancelled.')
-    return redirect('clinic_queue:reception_dashboard')
+    return _action_response(request, f'Token {token.token_number} cancelled.')
 
 
 @login_required
@@ -110,8 +116,9 @@ def queue_settings(request):
         form = QueueSettingsForm(request.POST, instance=settings)
         if form.is_valid():
             form.save()
+            broadcast_queue()
             messages.success(request, 'Queue settings updated.')
-            return redirect('clinic_queue:reception_dashboard')
+            return _action_response(request, 'Queue settings updated.')
 
         messages.error(request, 'Please check the queue settings.')
         return _dashboard_with_form(request, settings_form=form)
@@ -133,6 +140,15 @@ def _dashboard_with_form(request, patient_form=None, settings_form=None):
         'stats': queue_stats(),
     }
     return render(request, 'clinic_queue/reception_dashboard.html', context, status=400)
+
+
+def _action_response(request, message):
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        from django.http import JsonResponse
+
+        return JsonResponse({'ok': True, 'message': message})
+
+    return redirect('clinic_queue:reception_dashboard')
 
 
 def patient_status(request, token_number):

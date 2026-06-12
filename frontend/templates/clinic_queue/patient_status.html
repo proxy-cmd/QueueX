@@ -3,7 +3,7 @@
 {% block title %}Token {{ token.token_number }} | Queue Cure{% endblock %}
 
 {% block content %}
-<main class="patient-shell">
+<main class="patient-shell" data-patient-token="{{ token.token_number }}">
     <section class="patient-card">
         <div class="patient-header">
             <p class="clinic-line">{{ clinic.clinic_name }}</p>
@@ -12,27 +12,27 @@
 
         <div class="now-serving-line">
             <span>Now serving</span>
-            <strong>{% if current_serving %}{{ current_serving.token_number }}{% else %}Not started{% endif %}</strong>
+            <strong data-live="patient-now-serving">{% if current_serving %}{{ current_serving.token_number }}{% else %}Not started{% endif %}</strong>
         </div>
 
         <section class="patient-token-block">
             <span>Your token</span>
             <strong>{{ token.token_number }}</strong>
-            <p>{{ token.get_status_display }}</p>
+            <p data-live="patient-status">{{ token.get_status_display }}</p>
         </section>
 
         <section class="patient-metrics" aria-label="Token wait details">
             <article>
                 <span>People ahead</span>
-                <strong>{{ people_ahead }}</strong>
+                <strong data-live="patient-people-ahead">{{ people_ahead }}</strong>
             </article>
             <article>
                 <span>Estimated wait</span>
-                <strong>{{ estimated_wait }} min</strong>
+                <strong data-live="patient-estimated-wait">{{ estimated_wait }} min</strong>
             </article>
         </section>
 
-        <p class="quiet-note">This page is read-only. It will refresh live once WebSockets are added in the next module.</p>
+        <p class="quiet-note" data-live="connection-note">This page is read-only and updates live while the clinic queue changes.</p>
     </section>
 </main>
 {% endblock %}

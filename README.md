@@ -19,3 +19,21 @@ Copy-Item .env.example .env
 ```
 
 Before running in production, set a real `SECRET_KEY`, database URL, and secure cookie settings in the environment.
+
+## WebSocket Flow
+
+Live queue updates use Django Channels at:
+
+```text
+/ws/queue/
+```
+
+Current flow:
+
+```text
+Reception action
+-> Django view updates token data
+-> queue payload is broadcast to the clinic queue group
+-> receptionist, patient, and display pages receive the update
+-> visible queue numbers and wait times refresh without a full page reload
+```

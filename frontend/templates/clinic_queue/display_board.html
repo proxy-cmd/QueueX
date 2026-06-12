@@ -12,22 +12,22 @@
             </div>
             <div class="display-meta">
                 <span>Queue length</span>
-                <strong>{{ queue_length }}</strong>
+                <strong data-live="display-queue-length">{{ queue_length }}</strong>
             </div>
         </header>
 
         <section class="serving-number">
             {% if current_serving %}
-                {{ current_serving.token_number }}
+                <span data-live="display-serving">{{ current_serving.token_number }}</span>
             {% else %}
-                --
+                <span data-live="display-serving">--</span>
             {% endif %}
         </section>
 
         <section class="display-lower">
             <div>
                 <h2>Upcoming</h2>
-                <div class="upcoming-row">
+                <div class="upcoming-row" data-live="display-upcoming">
                     {% for token in upcoming_tokens %}
                         <span>{{ token.token_number }}</span>
                     {% empty %}
@@ -37,7 +37,7 @@
             </div>
             <div class="wait-block">
                 <span>Estimated total wait</span>
-                <strong>{{ estimated_wait }} min</strong>
+                <strong data-live="display-estimated-wait">{{ estimated_wait }} min</strong>
             </div>
         </section>
     </section>

@@ -1,7 +1,10 @@
+from asgiref.sync import async_to_sync
+from channels.testing import WebsocketCommunicator
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 
+from .consumers import QueueConsumer
 from .models import QueueSettings, Token
 from .services import (
     calculate_wait_time,
@@ -10,6 +13,7 @@ from .services import (
     complete_token,
     create_token,
     people_ahead,
+    queue_payload,
     public_queue_snapshot,
     queue_stats,
 )
@@ -84,6 +88,15 @@ class QueueServiceTests(TestCase):
         self.assertEqual(snapshot['upcoming_tokens'][0].id, second.id)
         self.assertEqual(snapshot['queue_length'], 1)
 
+    def test_queue_payload_is_json_ready(self):
+        create_token('Riya Sharma', '9876543210')
+
+        payload = queue_payload()
+
+        self.assertEqual(payload['stats']['total_waiting'], 1)
+        self.assertEqual(payload['tokens'][0]['token_number'], 'A001')
+        self.assertEqual(payload['tokens'][0]['status'], Token.WAITING)
+
 
 class ReceptionViewTests(TestCase):
     def setUp(self):
@@ -115,6 +128,19 @@ class ReceptionViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
+        self.assertTrue(Token.objects.filter(token_number='A001').exists())
+
+    def test_create_patient_token_ajax_response(self):
+        self.client.login(username='reception', password='strong-test-password')
+
+        response = self.client.post(
+            reverse('clinic_queue:create_patient_token'),
+            {'name': 'Riya Sharma', 'phone': '9876543210'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['ok'], True)
         self.assertTrue(Token.objects.filter(token_number='A001').exists())
 
     def test_create_patient_token_rejects_bad_phone(self):
@@ -174,3 +200,21 @@ class PublicQueueViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Now serving')
         self.assertContains(response, token.token_number)
+
+
+class QueueConsumerTests(TestCase):
+    def test_consumer_sends_snapshot_on_connect(self):
+        create_token('Riya Sharma', '9876543210')
+
+        async def run_test():
+            communicator = WebsocketCommunicator(QueueConsumer.as_asgi(), '/ws/queue/')
+            connected, _subprotocol = await communicator.connect()
+            self.assertTrue(connected)
+
+            message = await communicator.receive_json_from()
+            self.assertEqual(message['type'], 'queue.snapshot')
+            self.assertEqual(message['payload']['tokens'][0]['token_number'], 'A001')
+
+            await communicator.disconnect()
+
+        async_to_sync(run_test)()

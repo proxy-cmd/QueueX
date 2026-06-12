@@ -21,20 +21,22 @@
                 <p class="message message-{{ message.tags }}">{{ message }}</p>
             {% endfor %}
         </section>
+    {% else %}
+        <section class="message-stack" aria-live="polite"></section>
     {% endif %}
 
     <section class="stats-strip" aria-label="Queue summary">
         <article>
             <span>Total waiting</span>
-            <strong>{{ stats.total_waiting }}</strong>
+            <strong data-live="total-waiting">{{ stats.total_waiting }}</strong>
         </article>
         <article>
             <span>Completed today</span>
-            <strong>{{ stats.completed_today }}</strong>
+            <strong data-live="completed-today">{{ stats.completed_today }}</strong>
         </article>
         <article>
             <span>Now serving</span>
-            <strong>{% if stats.current_serving %}{{ stats.current_serving.token_number }}{% else %}None{% endif %}</strong>
+            <strong data-live="current-serving">{% if stats.current_serving %}{{ stats.current_serving.token_number }}{% else %}None{% endif %}</strong>
         </article>
     </section>
 
@@ -44,7 +46,7 @@
                 <h2>Add patient</h2>
                 <p>Keep it quick. Name, phone, token.</p>
             </div>
-            <form method="post" action="{% url 'clinic_queue:create_patient_token' %}" class="stack-form">
+            <form method="post" action="{% url 'clinic_queue:create_patient_token' %}" class="stack-form" data-live-action>
                 {% csrf_token %}
                 <label>
                     <span>Patient name</span>
@@ -65,11 +67,11 @@
                 <h2>Controls</h2>
                 <p>Use these during the live queue.</p>
             </div>
-            <form method="post" action="{% url 'clinic_queue:call_next' %}">
+            <form method="post" action="{% url 'clinic_queue:call_next' %}" data-live-action>
                 {% csrf_token %}
                 <button class="button button-call" type="submit">Call next</button>
             </form>
-            <form method="post" action="{% url 'clinic_queue:queue_settings' %}" class="settings-form">
+            <form method="post" action="{% url 'clinic_queue:queue_settings' %}" class="settings-form" data-live-action>
                 {% csrf_token %}
                 <label>
                     <span>Clinic name</span>
@@ -99,7 +101,7 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody data-live="queue-table">
                         {% for token in tokens %}
                             <tr>
                                 <td><strong>{{ token.token_number }}</strong></td>
@@ -108,13 +110,13 @@
                                 <td><span class="status status-{{ token.status }}">{{ token.get_status_display }}</span></td>
                                 <td class="action-cell">
                                     {% if token.status != "completed" %}
-                                        <form method="post" action="{% url 'clinic_queue:complete_token' token.id %}">
+                                        <form method="post" action="{% url 'clinic_queue:complete_token' token.id %}" data-live-action>
                                             {% csrf_token %}
                                             <button type="submit">Complete</button>
                                         </form>
                                     {% endif %}
                                     {% if token.status == "waiting" or token.status == "serving" %}
-                                        <form method="post" action="{% url 'clinic_queue:cancel_token' token.id %}">
+                                        <form method="post" action="{% url 'clinic_queue:cancel_token' token.id %}" data-live-action>
                                             {% csrf_token %}
                                             <button type="submit">Cancel</button>
                                         </form>
