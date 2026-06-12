@@ -1,39 +1,87 @@
 # Queue Cure '26
 
-Queue Cure '26 is a clinic queue system for replacing paper tokens with a live digital queue.
+Queue Cure '26 is a real-time clinic queue management system that replaces paper tokens with a live digital queue.
 
-This repo is being built module by module. The current brick is the project foundation:
+Patients can view their position in the queue, receptionists can manage tokens, and display screens stay synchronized through real-time updates.
 
-- `backend/` contains the Django project.
-- `frontend/` contains Django templates and static files.
-- `start.txt` is kept local and ignored by Git.
+## Project Structure
+
+```text
+backend/
+    Django project and backend logic
+
+frontend/
+    Templates, static files, and UI assets
+```
+
+`start.txt` is used locally and is excluded from version control.
+
+---
 
 ## Backend Setup
 
-```powershell
+```bash
 cd backend
+
 python -m venv .venv
+
 .\.venv\Scripts\python -m pip install -r requirements.txt
+
 Copy-Item .env.example .env
+
 .\.venv\Scripts\python manage.py check
 ```
 
-Before running in production, set a real `SECRET_KEY`, database URL, and secure cookie settings in the environment.
+Before deployment, configure the environment variables with a valid secret key, database settings, and production security options.
 
-## WebSocket Flow
+---
 
-Live queue updates use Django Channels at:
+## Real-Time Queue Updates
+
+Queue updates are handled using Django Channels and WebSockets.
+
+Endpoint:
 
 ```text
 /ws/queue/
 ```
 
-Current flow:
+Flow:
 
 ```text
-Reception action
--> Django view updates token data
--> queue payload is broadcast to the clinic queue group
--> receptionist, patient, and display pages receive the update
--> visible queue numbers and wait times refresh without a full page reload
+Receptionist action
+      ↓
+Queue data updated
+      ↓
+WebSocket event sent
+      ↓
+Connected clients receive update
+      ↓
+Queue information refreshes instantly
 ```
+
+This keeps receptionist, patient, and display screens synchronized without requiring page refreshes.
+
+---
+
+## Features
+
+* Digital token generation
+* Live queue tracking
+* Real-time updates with WebSockets
+* Estimated waiting time calculation
+* Receptionist queue management
+* Patient queue view
+* Waiting room display screen
+
+---
+
+## Tech Stack
+
+* Django
+* Django Channels
+* WebSockets
+* SQLite / PostgreSQL
+* HTML
+* CSS
+* JavaScript
