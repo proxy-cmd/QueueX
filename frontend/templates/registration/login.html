@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in | Queue Cure{% endblock %}
+
+{% block content %}
+<main class="login-shell">
+    <section class="login-panel">
+        <div>
+            <p class="clinic-line">Queue Cure</p>
+            <h1>Reception sign in</h1>
+        </div>
+        {% if form.errors %}
+            <p class="message message-error">Check your username and password.</p>
+        {% endif %}
+        <form method="post" class="stack-form">
+            {% csrf_token %}
+            <label>
+                <span>Username</span>
+                {{ form.username }}
+            </label>
+            <label>
+                <span>Password</span>
+                {{ form.password }}
+            </label>
+            <button class="button button-primary" type="submit">Sign in</button>
+        </form>
+    </section>
+</main>
+{% endblock %}

@@ -1,7 +1,9 @@
+import os
 from pathlib import Path
 
 import dj_database_url
 import environ
+from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
 
 
@@ -9,18 +11,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = BASE_DIR.parent
 
 env = environ.Env(
-    DEBUG=(bool, False),
     SESSION_COOKIE_SECURE=(bool, False),
     CSRF_COOKIE_SECURE=(bool, False),
 )
 env.read_env(BASE_DIR / ".env")
 
 
-DEBUG = env("DEBUG")
+raw_debug = os.environ.get("DJANGO_DEBUG", os.environ.get("DEBUG", "True"))
+DEBUG = str(raw_debug).strip().lower() not in {"0", "false", "no", "off"}
 
-SECRET_KEY = env("SECRET_KEY", default=get_random_secret_key() if DEBUG else None)
+SECRET_KEY = env("SECRET_KEY", default="")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = get_random_secret_key()
+    else:
+        raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG is False.")
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'clinic_queue:reception_dashboard'
+LOGOUT_REDIRECT_URL = 'login'
 
 
 INSTALLED_APPS = [

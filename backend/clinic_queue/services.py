@@ -16,11 +16,10 @@ def next_token_number():
 @transaction.atomic
 def create_token(name, phone):
     patient = Patient.objects.create(name=name.strip(), phone=phone.strip())
-    token = Token.objects.create(
+    return Token.objects.create(
         patient=patient,
         token_number=next_token_number(),
     )
-    return token
 
 
 @transaction.atomic
@@ -32,7 +31,7 @@ def call_next_token():
     token = (
         Token.objects.select_for_update()
         .filter(status=Token.WAITING)
-        .order_by('created_at')
+        .order_by('id')
         .first()
     )
     if not token:
@@ -59,11 +58,11 @@ def cancel_token(token_id):
 
 
 def current_serving_token():
-    return Token.objects.filter(status=Token.SERVING).order_by('served_at').first()
+    return Token.objects.filter(status=Token.SERVING).order_by('served_at', 'id').first()
 
 
 def waiting_tokens():
-    return Token.objects.filter(status=Token.WAITING).order_by('created_at')
+    return Token.objects.filter(status=Token.WAITING).order_by('id')
 
 
 def people_ahead(token):
@@ -72,7 +71,7 @@ def people_ahead(token):
 
     return Token.objects.filter(
         status=Token.WAITING,
-        created_at__lt=token.created_at,
+        id__lt=token.id,
     ).count()
 
 

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Reception | Queue Cure{% endblock %}
+
+{% block content %}
+<main class="desk-shell">
+    <section class="desk-top">
+        <div>
+            <p class="clinic-line">Queue Cure Reception</p>
+            <h1>Today&apos;s queue</h1>
+        </div>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="button button-ghost" type="submit">Sign out</button>
+        </form>
+    </section>
+
+    {% if messages %}
+        <section class="message-stack" aria-live="polite">
+            {% for message in messages %}
+                <p class="message message-{{ message.tags }}">{{ message }}</p>
+            {% endfor %}
+        </section>
+    {% endif %}
+
+    <section class="stats-strip" aria-label="Queue summary">
+        <article>
+            <span>Total waiting</span>
+            <strong>{{ stats.total_waiting }}</strong>
+        </article>
+        <article>
+            <span>Completed today</span>
+            <strong>{{ stats.completed_today }}</strong>
+        </article>
+        <article>
+            <span>Now serving</span>
+            <strong>{% if stats.current_serving %}{{ stats.current_serving.token_number }}{% else %}None{% endif %}</strong>
+        </article>
+    </section>
+
+    <section class="work-grid">
+        <div class="panel token-panel">
+            <div class="panel-heading">
+                <h2>Add patient</h2>
+                <p>Keep it quick. Name, phone, token.</p>
+            </div>
+            <form method="post" action="{% url 'clinic_queue:create_patient_token' %}" class="stack-form">
+                {% csrf_token %}
+                <label>
+                    <span>Patient name</span>
+                    {{ patient_form.name }}
+                    {% for error in patient_form.name.errors %}<small>{{ error }}</small>{% endfor %}
+                </label>
+                <label>
+                    <span>Phone number</span>
+                    {{ patient_form.phone }}
+                    {% for error in patient_form.phone.errors %}<small>{{ error }}</small>{% endfor %}
+                </label>
+                <button class="button button-primary" type="submit">Generate token</button>
+            </form>
+        </div>
+
+        <div class="panel call-panel">
+            <div class="panel-heading">
+                <h2>Controls</h2>
+                <p>Use these during the live queue.</p>
+            </div>
+            <form method="post" action="{% url 'clinic_queue:call_next' %}">
+                {% csrf_token %}
+                <button class="button button-call" type="submit">Call next</button>
+            </form>
+            <form method="post" action="{% url 'clinic_queue:queue_settings' %}" class="settings-form">
+                {% csrf_token %}
+                <label>
+                    <span>Clinic name</span>
+                    {{ settings_form.clinic_name }}
+                </label>
+                <label>
+                    <span>Avg. consultation minutes</span>
+                    {{ settings_form.average_consultation_minutes }}
+                </label>
+                <button class="button button-ghost" type="submit">Save settings</button>
+            </form>
+        </div>
+
+        <div class="panel queue-panel">
+            <div class="panel-heading">
+                <h2>Queue list</h2>
+                <p>Waiting and active tokens appear here.</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Token</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for token in tokens %}
+                            <tr>
+                                <td><strong>{{ token.token_number }}</strong></td>
+                                <td>{{ token.patient.name }}</td>
+                                <td>{{ token.patient.phone }}</td>
+                                <td><span class="status status-{{ token.status }}">{{ token.get_status_display }}</span></td>
+                                <td class="action-cell">
+                                    {% if token.status != "completed" %}
+                                        <form method="post" action="{% url 'clinic_queue:complete_token' token.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit">Complete</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if token.status == "waiting" or token.status == "serving" %}
+                                        <form method="post" action="{% url 'clinic_queue:cancel_token' token.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit">Cancel</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="empty-row">No patients in queue yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}

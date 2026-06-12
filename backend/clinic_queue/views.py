@@ -1,3 +1,133 @@
-from django.shortcuts import render
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
+from django.http import HttpResponseNotAllowed
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-# Create your views here.
+from .forms import PatientForm, QueueSettingsForm
+from .models import QueueSettings, Token
+from .services import (
+    call_next_token,
+    cancel_token,
+    complete_token,
+    create_token,
+    queue_stats,
+)
+
+
+def _recent_action_blocked(request, key, seconds=2):
+    now = timezone.now().timestamp()
+    last_seen = request.session.get(key)
+    request.session[key] = now
+    return last_seen is not None and now - float(last_seen) < seconds
+
+
+@login_required
+def reception_dashboard(request):
+    tokens = (
+        Token.objects.select_related('patient')
+        .exclude(status=Token.CANCELLED)
+        .order_by('id')[:50]
+    )
+
+    context = {
+        'patient_form': PatientForm(),
+        'settings_form': QueueSettingsForm(instance=QueueSettings.load()),
+        'tokens': tokens,
+        'stats': queue_stats(),
+    }
+    return render(request, 'clinic_queue/reception_dashboard.html', context)
+
+
+@login_required
+@require_POST
+def create_patient_token(request):
+    if _recent_action_blocked(request, 'last_create_token'):
+        messages.warning(request, 'Please wait a moment before generating another token.')
+        return redirect('clinic_queue:reception_dashboard')
+
+    form = PatientForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, 'Please fix the patient details and try again.')
+        return _dashboard_with_form(request, form)
+
+    try:
+        token = create_token(
+            name=form.cleaned_data['name'],
+            phone=form.cleaned_data['phone'],
+        )
+    except IntegrityError:
+        messages.error(request, 'Token could not be created. Please try again.')
+        return redirect('clinic_queue:reception_dashboard')
+
+    messages.success(request, f'Token {token.token_number} created for {token.patient.name}.')
+    return redirect('clinic_queue:reception_dashboard')
+
+
+@login_required
+@require_POST
+def call_next(request):
+    if _recent_action_blocked(request, 'last_call_next'):
+        messages.warning(request, 'Please wait a moment before calling the next token.')
+        return redirect('clinic_queue:reception_dashboard')
+
+    token = call_next_token()
+    if token:
+        messages.success(request, f'Now serving {token.token_number}.')
+    else:
+        messages.info(request, 'No waiting patients right now.')
+
+    return redirect('clinic_queue:reception_dashboard')
+
+
+@login_required
+@require_POST
+def complete_patient_token(request, token_id):
+    token = get_object_or_404(Token, id=token_id)
+    complete_token(token.id)
+    messages.success(request, f'Token {token.token_number} completed.')
+    return redirect('clinic_queue:reception_dashboard')
+
+
+@login_required
+@require_POST
+def cancel_patient_token(request, token_id):
+    token = get_object_or_404(Token, id=token_id)
+    cancel_token(token.id)
+    messages.success(request, f'Token {token.token_number} cancelled.')
+    return redirect('clinic_queue:reception_dashboard')
+
+
+@login_required
+def queue_settings(request):
+    settings = QueueSettings.load()
+
+    if request.method == 'POST':
+        form = QueueSettingsForm(request.POST, instance=settings)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Queue settings updated.')
+            return redirect('clinic_queue:reception_dashboard')
+
+        messages.error(request, 'Please check the queue settings.')
+        return _dashboard_with_form(request, settings_form=form)
+
+    return HttpResponseNotAllowed(['POST'])
+
+
+def _dashboard_with_form(request, patient_form=None, settings_form=None):
+    tokens = (
+        Token.objects.select_related('patient')
+        .exclude(status=Token.CANCELLED)
+        .order_by('id')[:50]
+    )
+
+    context = {
+        'patient_form': patient_form or PatientForm(),
+        'settings_form': settings_form or QueueSettingsForm(instance=QueueSettings.load()),
+        'tokens': tokens,
+        'stats': queue_stats(),
+    }
+    return render(request, 'clinic_queue/reception_dashboard.html', context, status=400)

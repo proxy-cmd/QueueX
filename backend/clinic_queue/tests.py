@@ -1,4 +1,6 @@
 from django.test import TestCase
+from django.urls import reverse
+from django.contrib.auth.models import User
 
 from .models import QueueSettings, Token
 from .services import (
@@ -69,3 +71,64 @@ class QueueServiceTests(TestCase):
         self.assertEqual(stats['total_waiting'], 1)
         self.assertEqual(stats['completed_today'], 1)
         self.assertIsNone(stats['current_serving'])
+
+
+class ReceptionViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='reception',
+            password='strong-test-password',
+        )
+
+    def test_dashboard_requires_login(self):
+        response = self.client.get(reverse('clinic_queue:reception_dashboard'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/login/', response['Location'])
+
+    def test_dashboard_loads_for_receptionist(self):
+        self.client.login(username='reception', password='strong-test-password')
+
+        response = self.client.get(reverse('clinic_queue:reception_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Queue Cure Reception')
+
+    def test_create_patient_token_from_dashboard(self):
+        self.client.login(username='reception', password='strong-test-password')
+
+        response = self.client.post(
+            reverse('clinic_queue:create_patient_token'),
+            {'name': 'Riya Sharma', 'phone': '9876543210'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Token.objects.filter(token_number='A001').exists())
+
+    def test_create_patient_token_rejects_bad_phone(self):
+        self.client.login(username='reception', password='strong-test-password')
+
+        response = self.client.post(
+            reverse('clinic_queue:create_patient_token'),
+            {'name': 'Riya Sharma', 'phone': 'bad phone'},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Token.objects.count(), 0)
+
+    def test_call_next_requires_post(self):
+        self.client.login(username='reception', password='strong-test-password')
+
+        response = self.client.get(reverse('clinic_queue:call_next'))
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_call_next_from_dashboard(self):
+        self.client.login(username='reception', password='strong-test-password')
+        token = create_token('Riya Sharma', '9876543210')
+
+        response = self.client.post(reverse('clinic_queue:call_next'))
+        token.refresh_from_db()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(token.status, Token.SERVING)

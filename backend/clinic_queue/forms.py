@@ -26,3 +26,8 @@ class QueueSettingsForm(forms.ModelForm):
     class Meta:
         model = QueueSettings
         fields = ['clinic_name', 'average_consultation_minutes']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['average_consultation_minutes'].min_value = 1
+        self.fields['average_consultation_minutes'].widget.attrs['min'] = 1
