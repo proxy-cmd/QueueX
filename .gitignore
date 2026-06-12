@@ -1,0 +1,39 @@
+# Project brief and local notes
+start.txt
+hi.tx
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+db.sqlite3
+.venv/
+venv/
+env/
+*.log
+media/
+staticfiles/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Node / frontend tooling
+node_modules/
+dist/
+build/
+.next/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
