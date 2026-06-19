@@ -1,8 +1,29 @@
 (function () {
+    var connectionStatus = 'disconnected';
+    
     function text(selector, value) {
         var element = document.querySelector(selector);
         if (element) {
             element.textContent = value;
+        }
+    }
+    
+    function setConnectionStatus(status) {
+        connectionStatus = status;
+        var indicator = document.querySelector('[data-connection-status]');
+        if (!indicator) {
+            return;
+        }
+        
+        indicator.className = 'connection-status connection-' + status;
+        indicator.setAttribute('aria-label', 'WebSocket connection is ' + status);
+        
+        if (status === 'connected') {
+            indicator.textContent = '●';
+        } else if (status === 'connecting') {
+            indicator.textContent = '◐';
+        } else {
+            indicator.textContent = '○';
         }
     }
 
@@ -152,20 +173,36 @@
 
     function connectQueueSocket() {
         if (!window.WebSocket) {
+            console.error('WebSocket not supported');
             return;
         }
 
+        setConnectionStatus('connecting');
         var protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         var socket = new WebSocket(protocol + window.location.host + '/ws/queue/');
 
+        socket.onopen = function () {
+            setConnectionStatus('connected');
+        };
+
         socket.onmessage = function (event) {
-            var data = JSON.parse(event.data);
-            if (data.payload) {
-                applyPayload(data.payload);
+            try {
+                var data = JSON.parse(event.data);
+                if (data.payload) {
+                    applyPayload(data.payload);
+                }
+            } catch (e) {
+                console.error('Failed to parse WebSocket message:', e);
             }
         };
 
+        socket.onerror = function (event) {
+            console.error('WebSocket error:', event);
+            setConnectionStatus('error');
+        };
+
         socket.onclose = function () {
+            setConnectionStatus('disconnected');
             window.setTimeout(connectQueueSocket, 2000);
         };
     }
@@ -187,7 +224,7 @@
         })
             .then(function (response) {
                 if (!response.ok) {
-                    throw new Error('Request failed');
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
                 }
                 return response.json();
             })
@@ -197,8 +234,10 @@
                     form.reset();
                 }
             })
-            .catch(function () {
-                form.submit();
+            .catch(function (error) {
+                console.error('Form submission error:', error);
+                showMessage('Error: ' + (error.message || 'Request failed. Retrying...'));
+                // Don't fallback to form.submit() - let user retry
             });
     });
 

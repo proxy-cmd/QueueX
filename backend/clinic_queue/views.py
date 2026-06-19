@@ -18,13 +18,7 @@ from .services import (
     queue_stats,
     token_wait_details,
 )
-
-
-def _recent_action_blocked(request, key, seconds=2):
-    now = timezone.now().timestamp()
-    last_seen = request.session.get(key)
-    request.session[key] = now
-    return last_seen is not None and now - float(last_seen) < seconds
+from .rate_limit import check_rate_limit
 
 
 @login_required
@@ -47,8 +41,9 @@ def reception_dashboard(request):
 @login_required
 @require_POST
 def create_patient_token(request):
-    if _recent_action_blocked(request, 'last_create_token'):
-        messages.warning(request, 'Please wait a moment before generating another token.')
+    is_limited, wait_seconds = check_rate_limit(request, 'create_token', seconds_between=1)
+    if is_limited:
+        messages.warning(request, f'Please wait {wait_seconds} second(s) before creating another token.')
         return redirect('clinic_queue:reception_dashboard')
 
     form = PatientForm(request.POST)
@@ -60,6 +55,7 @@ def create_patient_token(request):
         token = create_token(
             name=form.cleaned_data['name'],
             phone=form.cleaned_data['phone'],
+            user=request.user,
         )
     except IntegrityError:
         messages.error(request, 'Token could not be created. Please try again.')
@@ -73,11 +69,12 @@ def create_patient_token(request):
 @login_required
 @require_POST
 def call_next(request):
-    if _recent_action_blocked(request, 'last_call_next'):
-        messages.warning(request, 'Please wait a moment before calling the next token.')
+    is_limited, wait_seconds = check_rate_limit(request, 'call_next', seconds_between=2)
+    if is_limited:
+        messages.warning(request, f'Please wait {wait_seconds} second(s) before calling the next token.')
         return redirect('clinic_queue:reception_dashboard')
 
-    token = call_next_token()
+    token = call_next_token(user=request.user)
     if token:
         messages.success(request, f'Now serving {token.token_number}.')
         broadcast_queue()
@@ -92,7 +89,7 @@ def call_next(request):
 @require_POST
 def complete_patient_token(request, token_id):
     token = get_object_or_404(Token, id=token_id)
-    complete_token(token.id)
+    complete_token(token.id, user=request.user)
     broadcast_queue()
     messages.success(request, f'Token {token.token_number} completed.')
     return _action_response(request, f'Token {token.token_number} completed.')
@@ -102,7 +99,7 @@ def complete_patient_token(request, token_id):
 @require_POST
 def cancel_patient_token(request, token_id):
     token = get_object_or_404(Token, id=token_id)
-    cancel_token(token.id)
+    cancel_token(token.id, user=request.user)
     broadcast_queue()
     messages.success(request, f'Token {token.token_number} cancelled.')
     return _action_response(request, f'Token {token.token_number} cancelled.')

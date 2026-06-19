@@ -1,7 +1,22 @@
 from django.db import transaction
 from django.utils import timezone
+import json
 
-from .models import Patient, QueueSettings, Token
+from .models import Patient, QueueSettings, Token, AuditLog
+
+
+def log_action(action, token=None, user=None, details=None):
+    """Log an action to the audit trail."""
+    try:
+        AuditLog.objects.create(
+            action=action,
+            token=token,
+            user=user,
+            details=json.dumps(details or {})
+        )
+    except Exception as e:
+        # Don't fail the main operation if logging fails
+        print(f"Failed to log action {action}: {e}")
 
 
 def next_token_number():
@@ -14,19 +29,25 @@ def next_token_number():
 
 
 @transaction.atomic
-def create_token(name, phone):
+def create_token(name, phone, user=None):
     patient = Patient.objects.create(name=name.strip(), phone=phone.strip())
-    return Token.objects.create(
+    token = Token.objects.create(
         patient=patient,
         token_number=next_token_number(),
     )
+    log_action('create_token', token=token, user=user, details={
+        'patient_name': name,
+        'patient_phone': phone,
+    })
+    return token
 
 
 @transaction.atomic
-def call_next_token():
+def call_next_token(user=None):
     current = Token.objects.select_for_update().filter(status=Token.SERVING).first()
     if current:
         current.mark_completed()
+        log_action('complete_token', token=current, user=user, details={'auto_complete': True})
 
     token = (
         Token.objects.select_for_update()
@@ -38,22 +59,25 @@ def call_next_token():
         return None
 
     token.mark_serving()
+    log_action('call_next', token=token, user=user)
     return token
 
 
 @transaction.atomic
-def complete_token(token_id):
+def complete_token(token_id, user=None):
     token = Token.objects.select_for_update().get(id=token_id)
     if token.status != Token.COMPLETED:
         token.mark_completed()
+        log_action('complete_token', token=token, user=user)
     return token
 
 
 @transaction.atomic
-def cancel_token(token_id):
+def cancel_token(token_id, user=None):
     token = Token.objects.select_for_update().get(id=token_id)
     if token.status in [Token.WAITING, Token.SERVING]:
         token.mark_cancelled()
+        log_action('cancel_token', token=token, user=user)
     return token
 
 

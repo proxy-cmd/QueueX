@@ -434,10 +434,10 @@ th {
     border-radius: 8px;
     color: var(--green-dark);
     display: grid;
-    font-size: clamp(110px, 24vw, 300px);
+    font-size: clamp(140px, 32vw, 380px);
     font-weight: 800;
     line-height: 1;
-    min-height: 42vh;
+    min-height: 50vh;
     place-items: center;
 }
 
@@ -461,10 +461,10 @@ th {
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 8px;
     color: #f7fbf8;
-    font-size: clamp(24px, 4vw, 48px);
+    font-size: clamp(32px, 5vw, 56px);
     font-weight: 800;
-    min-width: 110px;
-    padding: 14px 18px;
+    min-width: 120px;
+    padding: 18px 22px;
     text-align: center;
 }
 
@@ -481,16 +481,124 @@ th {
     .desk-top {
         align-items: start;
     }
+    
+    .desk-shell {
+        padding: 16px 0;
+        width: calc(100% - 16px);
+    }
 
     .patient-token-block strong {
         font-size: 58px;
     }
 
     .display-shell {
-        padding: 16px;
+        padding: 12px;
     }
 
     .display-board {
-        min-height: calc(100vh - 32px);
+        min-height: calc(100vh - 24px);
+        gap: 16px;
     }
+    
+    .display-header {
+        gap: 12px;
+    }
+    
+    .display-header h1 {
+        font-size: clamp(32px, 5vw, 60px);
+    }
+    
+    .serving-number {
+        min-height: 45vh;
+        font-size: clamp(90px, 25vw, 200px);
+    }
+    
+    .upcoming-row span {
+        min-width: 100px;
+        font-size: clamp(24px, 4vw, 40px);
+        padding: 12px 16px;
+    }
+    
+    .action-cell {
+        flex-direction: column;
+    }
+    
+    .action-cell button {
+        width: 100%;
+    }
+    
+    .display-meta,
+    .wait-block {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: clamp(24px, 4vw, 32px);
+    }
+    
+    h2 {
+        font-size: 18px;
+    }
+    
+    .stats-strip {
+        grid-template-columns: 1fr;
+    }
+    
+    .panel {
+        padding: 16px;
+    }
+    
+    .work-grid {
+        gap: 12px;
+    }
+    
+    .button-call {
+        font-size: 16px;
+        min-height: 48px;
+    }
+    
+    th, td {
+        padding: 10px 6px;
+        font-size: 12px;
+    }
+    
+    .table-wrap {
+        font-size: 12px;
+    }
+}
+
+/* Connection status indicator */
+.connection-status {
+    display: inline-block;
+    font-size: 18px;
+    line-height: 1;
+    margin-left: 8px;
+}
+
+.connection-connected {
+    color: #116149;
+    animation: pulse-green 2s infinite;
+}
+
+.connection-connecting {
+    color: #a45b08;
+    animation: pulse-amber 1s infinite;
+}
+
+.connection-disconnected,
+.connection-error {
+    color: #9e2f28;
+}
+
+@keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes pulse-amber {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }
