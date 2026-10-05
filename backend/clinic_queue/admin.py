@@ -22,4 +22,4 @@ class TokenAdmin(admin.ModelAdmin):
 class QueueSettingsAdmin(admin.ModelAdmin):
     list_display = ('clinic_name', 'average_consultation_minutes')
 
-# Register your models here.
+# Register models here.
