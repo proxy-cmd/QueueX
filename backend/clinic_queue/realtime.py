@@ -4,7 +4,7 @@ from channels.layers import get_channel_layer
 from .services import queue_payload
 
 
-QUEUE_GROUP = 'clinic_queue'
+QUEUE_GROUP = "clinic_queue"
 
 
 def broadcast_queue():
