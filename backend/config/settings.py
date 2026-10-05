@@ -28,7 +28,7 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG is False.")
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
-LOGIN_URL = 'login'
+LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = 'clinic_queue:reception_dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
