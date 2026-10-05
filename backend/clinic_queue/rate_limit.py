@@ -1,4 +1,4 @@
-"""Rate limiting utilities to prevent abuse of queue operations."""
+"""Rate-limiting utilities to prevent abuse of queue operations."""
 
 from django.utils import timezone
 from datetime import timedelta
